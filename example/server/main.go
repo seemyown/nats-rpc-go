@@ -1,22 +1,17 @@
 package main
 
 import (
-	"log"
-	"time"
-
 	"github.com/nats-io/nats.go"
 	"github.com/seemyown/nats-rpc-go/natsrpc"
+	"log"
 )
 
-// AddRequest — пример структуры запроса
-type AddRequest struct {
-	A int `json:"a"`
-	B int `json:"b"`
+type HelloRequest struct {
+	Name string `json:"name"`
 }
 
-// AddResponse — пример структуры ответа
-type AddResponse struct {
-	Result int `json:"result"`
+type HelloResponse struct {
+	Message string `json:"message"`
 }
 
 func main() {
@@ -24,33 +19,23 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer nc.Close()
+	app := natsrpc.New(nc)
+	app.Use(natsrpc.Logger())
 
-	// Новый роутер с таймаутом 1s
-	router, err := natsrpc.NewRouter(nc, natsrpc.WithRequestTimeout(time.Second))
-	if err != nil {
+	app.Handle("hello", func(c *natsrpc.Ctx) error {
+		var req HelloRequest
+		if err := c.Bind(&req); err != nil {
+			return natsrpc.ErrBadRequest
+		}
+		resp := HelloResponse{Message: "Hello, " + req.Name}
+		return c.JSON(resp, nil)
+	})
+
+	if err := app.Listen(); err != nil {
 		log.Fatal(err)
 	}
-	defer router.Close()
+	log.Println("server listening...")
 
-	// Глобальный логгер
-	router.Use(func(next natsrpc.HandlerFunc) natsrpc.HandlerFunc {
-		return func(c *natsrpc.Context) {
-			log.Println("got request on", c.Msg.Subject)
-			next(c)
-		}
-	})
-
-	router.Handle("calc.add", func(c *natsrpc.Context) {
-		var req AddRequest
-		if err := c.Bind(&req); err != nil {
-			log.Println("bind error:", err)
-			return
-		}
-		res := AddResponse{Result: req.A + req.B}
-		c.JSON(res)
-	})
-
-	log.Println("listening on calc.add")
+	// Keep process alive
 	select {}
 }

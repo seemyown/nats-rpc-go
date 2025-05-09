@@ -1,12 +1,21 @@
 package natsrpc
 
-import "errors"
+import "fmt"
 
-// Ошибки, которые могут пригодиться для логики и валидации опций.
+// RPCError represents an error with a numeric code and message, similar to HTTP status codes.
+type RPCError struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+}
+
+func (e *RPCError) Error() string {
+	return fmt.Sprintf("%d: %s", e.Code, e.Msg)
+}
+
+// Predefined common errors
 var (
-	ErrRouterStarted            = errors.New("natsrpc: router already started, cannot add new routes")
-	ErrHandlerAlreadyRegistered = errors.New("natsrpc: handler already registered for this subject")
-	ErrNoReplySubject           = errors.New("natsrpc: no reply subject specified")
-	ErrInvalidOption            = errors.New("natsrpc: invalid router option")
-	ErrNilContext               = errors.New("natsrpc: context must not be nil")
+	ErrBadRequest = &RPCError{Code: 400, Msg: "bad request"}
+	ErrNotFound   = &RPCError{Code: 404, Msg: "not found"}
+	ErrTimeout    = &RPCError{Code: 408, Msg: "timeout"}
+	ErrInternal   = &RPCError{Code: 500, Msg: "internal server error"}
 )

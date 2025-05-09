@@ -9,13 +9,12 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// AddRequest/Response должны совпадать с сервером
-type AddRequest struct {
-	A int `json:"a"`
-	B int `json:"b"`
+type HelloRequest struct {
+	Name string `json:"name"`
 }
-type AddResponse struct {
-	Result int `json:"result"`
+
+type HelloResponse struct {
+	Message string `json:"message"`
 }
 
 func main() {
@@ -23,15 +22,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer nc.Close()
+	defer nc.Drain()
 
-	req := AddRequest{A: 3, B: 4}
+	req := HelloRequest{Name: "Gilfoyle"}
 	data, _ := json.Marshal(req)
-	msg, err := nc.Request("calc.add", data, 1*time.Second)
+
+	msg, err := nc.Request("hello", data, 2*time.Second)
 	if err != nil {
-		log.Fatal("request error:", err)
+		log.Fatal(err)
 	}
-	var resp AddResponse
-	json.Unmarshal(msg.Data, &resp)
-	fmt.Printf("%d + %d = %d\n", req.A, req.B, resp.Result)
+
+	var resp HelloResponse
+	if err := json.Unmarshal(msg.Data, &resp); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(resp.Message)
 }
