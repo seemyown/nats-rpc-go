@@ -52,7 +52,9 @@ func (a *App) Handle(subject string, h Handler, m ...Middleware) {
 // Listen subscribes to all registered subjects and starts processing.
 func (a *App) Listen() error {
 	for subj, h := range a.handlers {
+		log.Printf("subscribing to %s", subj)
 		_, err := a.nc.QueueSubscribe(subj, "natsrpc", func(msg *nats.Msg) {
+			log.Printf("received %s", subj)
 			// Derive context with cancellation tied to client timeout
 			ctx, cancel := context.WithCancel(context.Background())
 			// Ensure cancel on function exit
